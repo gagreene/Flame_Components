@@ -1,0 +1,66 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+share/python-wheels/
+var/
+wheels/
+*.egg
+*.egg-info/
+.installed.cfg
+MANIFEST
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Tool caches and reports
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.cover
+*.py,cover
+
+# Notebooks and local databases
+.ipynb_checkpoints/
+*.sqlite3
+
+# Logs and runtime artifacts
+*.log
+*.pid
+*.pid.lock
+*.seed
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
