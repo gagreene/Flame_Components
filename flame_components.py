@@ -3,9 +3,18 @@
 Created on Wed Oct  11 13:25:52 2023
 
 @author: Gregory A. Greene
+
+Flame Components — fire behavior calculations for surface and crown fires.
+
+NaN handling: All functions accept numpy arrays containing NaN values. NaNs are
+automatically masked via numpy.ma and propagate silently through calculations —
+masked input cells produce masked (NaN) output cells without warning. To inspect
+how many cells were masked, check ``result_array[numpy.isnan(result_array)].size``
+on the returned array.
 """
 
 import numbers
+import warnings
 from numpy import ma, ndarray, nan, isnan
 from numpy.ma import sin, arccos, arcsin, arctan, sqrt, log, power
 from numpy import pi, degrees, radians
@@ -22,22 +31,30 @@ def getMidFlameWS(wind_speed: Union[int, float, ndarray],
                   canopy_baseht: Union[int, float, ndarray],
                   units: str = 'SI') -> Union[int, float, ndarray]:
     """
-    Function to calculate mid-flame wind speed
-    :param wind_speed: wind speed; if units == "SI": 10m wind speed (km/h); if units == "IMP": 20ft wind speed (mi/h)
+    Function to calculate mid-flame wind speed.
+    :param wind_speed: reference-height wind speed.
+        SI mode  → 10-m wind speed (km/h) measured above open ground or canopy top.
+        IMP mode → 20-ft wind speed (mi/h).
+        WARNING: The 10-m reference height used here differs from the canopy-top wind
+        speed formula used in getFlameTilt (Butler model). Do not use the output of
+        this function as input to the Butler tilt model.
     :param canopy_cover: canopy cover (percent)
-    :param canopy_ht: stand ht (m or ft)
-    :param canopy_baseht: canopy base height (m or ft)
+    :param canopy_ht: stand height (m for SI, ft for IMP). Values of 0 will be replaced
+        with 0.5 m equivalent (1.6404 ft) and a UserWarning will be issued.
+    :param canopy_baseht: canopy base height (m for SI, ft for IMP)
     :param units: units of input data ("SI" or "IMP")
-        SI = metric (10-m ws in km/h, ht in m, cbh in m)
-        IMP = imperial (20-ft ws in mi/h, ht in ft, cbh in ft)
-    :return: mid-flame windspeed (m/s)
+        SI = metric (10-m ws in km/h, height in m, cbh in m)
+        IMP = imperial (20-ft ws in mi/h, height in ft, cbh in ft)
+    :return: mid-flame wind speed (m/s). Always metres per second regardless of input units.
+        For SI inputs, heights are converted to feet internally before applying the
+        Albini and Baughman (1979) equation (defined in US customary units).
 
     Divide by 3.6 to convert from km/h to m/s\n
     Divide windspeed by 1.15 to convert from 10-m to 20-ft equivalent (Lawson and Armitage 2008)\n
     Calculate mid-flame windspeed (m/s) using under canopy equations (Albini and Baughman 1979)
           Uc/Uh = 0.555 / (sqrt(f*H) * ln((20 + 0.36*H) / (0.13*H)))\n
           where f = crown ratio * canopy cover (proportion) / 3, H = stand height (ft)\n
-    Equations explained well in Andrews (2012) - Modeling wind adjustement factor and
+    Equations explained well in Andrews (2012) - Modeling wind adjustment factor and
     midflame wind speed for Rothermel's surface fire spread model\n
     """
     # ### CHECK FOR NUMPY ARRAYS IN INPUT PARAMETERS
@@ -95,6 +112,14 @@ def getMidFlameWS(wind_speed: Union[int, float, ndarray],
     crown_ratio = (canopy_ht - canopy_baseht) / canopy_ht  # calculate crown ratio
     f = crown_ratio * canopy_cover / 300
 
+    if ma.any(canopy_ht == 0):
+        warnings.warn(
+            'One or more canopy_ht values are 0. These will be replaced with 1.6404 ft (0.5 m) '
+            'to avoid division-by-zero in the Albini & Baughman (1979) equation. '
+            'Note: by this point canopy_ht has been converted to feet internally.',
+            UserWarning,
+            stacklevel=2,
+        )
     canopy_ht = ma.where(canopy_ht == 0,
                          0.5 * 3.28084,
                          canopy_ht)
@@ -547,12 +572,15 @@ def getFlameResidenceTime(ros: Union[int, float, ndarray],
                           midflame_ws: Union[int, float, ndarray],
                           units: str) -> Union[int, float, ndarray]:
     """
-    Function to calculate flame residence time using equation from Nelson and Adkins (1988)
-    :param ros: Fire rate of spread (m/min)
+    Function to calculate flame residence time using equation from Nelson and Adkins (1988).
+    :param ros: Fire rate of spread (m/min). NOTE: input units are always m/min.
+        The "units" parameter below controls the OUTPUT unit only.
     :param fuel_consumption: Amount of fuel consumed by fire front (kg/m^2)
-    :param midflame_ws: Mid-flame windspeed (m/s)
-    :param units: return flame residence time in seconds or minutes ("sec", "min")
-    :return: Flame residence time (seconds or minutes)
+    :param midflame_ws: Mid-flame wind speed (m/s)
+    :param units: Output unit for flame residence time ("sec" or "min").
+        This parameter does NOT affect the expected input unit for ros — ros must
+        always be provided in m/min.
+    :return: Flame residence time in seconds ("sec") or minutes ("min").
     """
     # ### CHECK FOR NUMPY ARRAYS IN INPUT PARAMETERS
     if any(isinstance(data, ndarray) for data in [ros, fuel_consumption, midflame_ws]):
