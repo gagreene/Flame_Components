@@ -646,6 +646,17 @@ def getFlameDepth(ros: Union[int, float, ndarray],
         return fd.data[0]
 
 
+def _multiprocessing_worker(func_name: str, kwargs_dict: dict):
+    """
+    Module-level worker for flameComponent_ArrayMultiprocessing.
+    Must be at module level (not a closure) so multiprocessing can pickle it.
+    :param func_name: name of the flame_components function to call
+    :param kwargs_dict: keyword arguments to pass to that function
+    """
+    func = globals().get(func_name)
+    return func(**kwargs_dict)
+
+
 def _gen_blocks(array, block_size, stride):
     """
     Function to generate blocks
@@ -672,18 +683,17 @@ def _estimate_optimal_block_size(array_shape: tuple,
     return array_shape[0] // num_processors
 
 
-# TODO - Verify that this function works...
 def flameComponent_ArrayMultiprocessing(flame_function: str,
                                         num_processors: int = 2,
                                         block_size: int = None,
-                                        *kwargs) -> list:
+                                        **kwargs) -> list:
     """
     Function breaks input arrays into blocks and processes each block with a different worker/processor.
     Uses the function requested in the "flame_function" parameter.
 
     **flame_function options**
         "midflame_ws", "flame_length", "flame_height",
-        "flame_tilt", "flame_residence", "flame_depth"
+        "flame_tilt", "flame_residence" (→ getFlameResidenceTime), "flame_depth"
 
     :param flame_function: The flame components function to implement.
     :param num_processors: Number of cores for multiprocessing
@@ -699,7 +709,7 @@ def flameComponent_ArrayMultiprocessing(flame_function: str,
         'flame_length': 'getFlameLength',
         'flame_height': 'getFlameHeight',
         'flame_tilt': 'getFlameTilt',
-        'flame_residence': 'getFlameResidence',
+        'flame_residence': 'getFlameResidenceTime',
         'flame_depth': 'getFlameDepth'
     }
     # Get the function object from the global scope
@@ -765,13 +775,14 @@ def flameComponent_ArrayMultiprocessing(flame_function: str,
 
         input_blocks.append((row, block_positions[idx]))  # Attach the position to each block
 
-    # Define a wrapper for multiprocessing
-    def worker(chunk):
-        return function_to_run(**chunk)
-
     # Run the multiprocessing with starmap_async
+    # Uses module-level _multiprocessing_worker so it can be pickled by multiprocessing.Pool
+    fn_name = flame_func_dict[flame_function]
     with mp.Pool(processes=num_processors) as pool:
-        async_result = pool.starmap_async(worker, [(block[0],) for block in input_blocks])
+        async_result = pool.starmap_async(
+            _multiprocessing_worker,
+            [(fn_name, block[0]) for block in input_blocks]
+        )
 
         # Retrieve the results asynchronously
         results = async_result.get()

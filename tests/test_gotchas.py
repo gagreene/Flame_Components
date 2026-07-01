@@ -49,3 +49,46 @@ class TestFireTypeBugs:
         )
         assert result.shape == (2,)
         assert np.all(result >= 0)
+
+
+class TestMultiprocessingBugs:
+    """
+    Two bugs in flameComponent_ArrayMultiprocessing:
+      Bug 3 (line 679): *kwargs (tuple) should be **kwargs (dict)
+      Bug 4 (line 702): 'getFlameResidence' should be 'getFlameResidenceTime'
+    """
+
+    def test_kwargs_signature_accepts_keyword_arguments(self):
+        """
+        Bug 3: passing keyword args must not raise TypeError.
+        After fix, the function accepts **kwargs and can call .items().
+        We expect it to proceed past argument parsing; any subsequent error is acceptable.
+        """
+        ros = np.array([1.0, 1.5, 2.0, 2.5])
+        fc_arr = np.array([0.5, 0.6, 0.7, 0.8])
+        ws = np.array([1.0, 1.2, 1.4, 1.6])
+        try:
+            flameComponent_ArrayMultiprocessing(
+                'flame_residence', 2, None,
+                ros=ros, fuel_consumption=fc_arr, midflame_ws=ws, units='sec'
+            )
+        except TypeError as e:
+            pytest.fail(f"Bug 3 still present — *kwargs signature rejected keyword args: {e}")
+
+    def test_flame_residence_key_resolves_to_valid_function(self):
+        """
+        Bug 4: 'flame_residence' must not raise ValueError('does not exist').
+        After fix, globals().get('getFlameResidenceTime') returns the actual function.
+        """
+        ros = np.array([1.0, 1.5, 2.0, 2.5])
+        fc_arr = np.array([0.5, 0.6, 0.7, 0.8])
+        ws = np.array([1.0, 1.2, 1.4, 1.6])
+        try:
+            flameComponent_ArrayMultiprocessing(
+                'flame_residence', 2, None,
+                ros=ros, fuel_consumption=fc_arr, midflame_ws=ws, units='sec'
+            )
+        except ValueError as e:
+            assert 'does not exist' not in str(e), (
+                f"Bug 4 still present — 'flame_residence' resolved to None: {e}"
+            )
