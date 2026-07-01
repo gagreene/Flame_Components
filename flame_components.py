@@ -292,7 +292,7 @@ def getFlameHeight(model: str,
 
     # Verify fire_type
     if model == 'Nelson':
-        if not isinstance(fire_type, (numbers.Real, float, ndarray, type(None))):
+        if not isinstance(fire_type, (numbers.Real, float, str, ndarray, type(None))):  # Bug 1 fix: added str
             raise TypeError('fire_type must be either None, str, int or numpy ndarray data types')
         elif isinstance(fire_type, (str, type(None))):
             if fire_type not in ['surface', 'passive crown', 'active crown']:
@@ -302,7 +302,7 @@ def getFlameHeight(model: str,
                 fire_type = fire_type_dict.get(fire_type, nan)  # Convert fire_type to integer value
         if isinstance(fire_type, ndarray):
             fire_type = ma.array(fire_type, mask=isnan(fire_type))
-        elif isinstance(midflame_ws, numbers.Real):
+        elif isinstance(fire_type, numbers.Real):  # Bug 2 fix: was isinstance(midflame_ws, ...)
             fire_type = ma.array([float(fire_type)], mask=isnan([fire_type]))
 
     # Verify fire_intensity
