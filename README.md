@@ -18,6 +18,23 @@ This repository provides several functions for calculating various fire behavior
 - Python 3.8+
 - **Libraries**: `numpy`, `multiprocessing`
 
+## Installation
+
+```bash
+pip install flame-components
+```
+
+## Development
+
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management and
+packaging.
+
+```bash
+uv sync              # create .venv and install runtime + dev dependencies
+uv run pytest tests/ -v   # run the test suite
+uv build             # build the wheel and sdist into dist/
+```
+
 ## Usage
 
 ### Key Functions
