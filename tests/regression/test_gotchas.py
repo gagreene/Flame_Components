@@ -1,24 +1,28 @@
-# tests/test_gotchas.py
-"""Regression tests for bugs identified in docs/CODEBASE.md."""
+# tests/regression/test_gotchas.py
+"""
+Regression tests for bugs documented in docs/CODEBASE.md and fixed in
+docs/GOTCHAS_FIX_PLAN.md. These must never regress.
+Updated to use snake_case function names (snake_case since 0.1.0).
+"""
 import pytest
 import numpy as np
 from flame_components import (
-    getFlameHeight,
-    flameComponent_ArrayMultiprocessing,
+    get_flame_height,
+    flame_component_array_multiprocessing,
 )
 
 
 class TestFireTypeBugs:
     """
-    Two bugs in getFlameHeight fire_type validation:
-      Bug 1 (line 295): str not in permitted isinstance types → TypeError for string fire_type
-      Bug 2 (line 305): isinstance checks midflame_ws not fire_type → AttributeError when
-                        midflame_ws is ndarray and fire_type is scalar
+    Two bugs in get_flame_height fire_type validation (fixed):
+      Bug 1: str not in isinstance guard → TypeError for string fire_type
+      Bug 2: isinstance checked midflame_ws not fire_type → AttributeError
+             when midflame_ws is ndarray and fire_type is scalar
     """
 
-    def test_string_fire_type_surface_does_not_raise_type_error(self):
+    def test_string_fire_type_surface_does_not_raise(self):
         """Bug 1: fire_type='surface' must not raise TypeError."""
-        result = getFlameHeight(
+        result = get_flame_height(
             model='Nelson',
             flame_length=5.0,
             fire_type='surface',
@@ -27,9 +31,9 @@ class TestFireTypeBugs:
         )
         assert result >= 0
 
-    def test_string_fire_type_active_crown_does_not_raise_type_error(self):
+    def test_string_fire_type_active_crown_does_not_raise(self):
         """Bug 1: fire_type='active crown' must not raise TypeError."""
-        result = getFlameHeight(
+        result = get_flame_height(
             model='Nelson',
             flame_length=10.0,
             fire_type='active crown',
@@ -39,8 +43,8 @@ class TestFireTypeBugs:
         assert result >= 0
 
     def test_string_fire_type_with_array_midflame_ws(self):
-        """Both bugs: string fire_type with ndarray midflame_ws (requires both fixes)."""
-        result = getFlameHeight(
+        """Both bugs: string fire_type + ndarray midflame_ws requires both fixes."""
+        result = get_flame_height(
             model='Nelson',
             flame_length=np.array([5.0, 6.0]),
             fire_type='surface',
@@ -53,38 +57,31 @@ class TestFireTypeBugs:
 
 class TestMultiprocessingBugs:
     """
-    Two bugs in flameComponent_ArrayMultiprocessing:
-      Bug 3 (line 679): *kwargs (tuple) should be **kwargs (dict)
-      Bug 4 (line 702): 'getFlameResidence' should be 'getFlameResidenceTime'
+    Two bugs in flame_component_array_multiprocessing (fixed):
+      Bug 3: *kwargs (positional tuple) instead of **kwargs (keyword dict)
+      Bug 4: 'getFlameResidence' name string (missing 'Time') resolved to None
     """
 
     def test_kwargs_signature_accepts_keyword_arguments(self):
-        """
-        Bug 3: passing keyword args must not raise TypeError.
-        After fix, the function accepts **kwargs and can call .items().
-        We expect it to proceed past argument parsing; any subsequent error is acceptable.
-        """
+        """Bug 3: keyword arguments must not raise TypeError."""
         ros = np.array([1.0, 1.5, 2.0, 2.5])
         fc_arr = np.array([0.5, 0.6, 0.7, 0.8])
         ws = np.array([1.0, 1.2, 1.4, 1.6])
         try:
-            flameComponent_ArrayMultiprocessing(
+            flame_component_array_multiprocessing(
                 'flame_residence', 2, None,
                 ros=ros, fuel_consumption=fc_arr, midflame_ws=ws, units='sec'
             )
         except TypeError as e:
-            pytest.fail(f"Bug 3 still present — *kwargs signature rejected keyword args: {e}")
+            pytest.fail(f"Bug 3 still present — *kwargs rejected keyword args: {e}")
 
     def test_flame_residence_key_resolves_to_valid_function(self):
-        """
-        Bug 4: 'flame_residence' must not raise ValueError('does not exist').
-        After fix, globals().get('getFlameResidenceTime') returns the actual function.
-        """
+        """Bug 4: 'flame_residence' key must resolve to get_flame_residence_time."""
         ros = np.array([1.0, 1.5, 2.0, 2.5])
         fc_arr = np.array([0.5, 0.6, 0.7, 0.8])
         ws = np.array([1.0, 1.2, 1.4, 1.6])
         try:
-            flameComponent_ArrayMultiprocessing(
+            flame_component_array_multiprocessing(
                 'flame_residence', 2, None,
                 ros=ros, fuel_consumption=fc_arr, midflame_ws=ws, units='sec'
             )
