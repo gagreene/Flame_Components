@@ -109,8 +109,6 @@ def get_mid_flame_ws(wind_speed: Union[int, float, ndarray],
         canopy_baseht = canopy_baseht * 3.28084  # convert cbh in meters to feet
     elif units == 'IMP':
         wind_speed = wind_speed / 2.23694  # convert mi/h to m/s
-    crown_ratio = (canopy_ht - canopy_baseht) / canopy_ht  # calculate crown ratio
-    f = crown_ratio * canopy_cover / 300
 
     if ma.any(canopy_ht == 0):
         warnings.warn(
@@ -123,6 +121,9 @@ def get_mid_flame_ws(wind_speed: Union[int, float, ndarray],
     canopy_ht = ma.where(canopy_ht == 0,
                          0.5 * 3.28084,
                          canopy_ht)
+
+    crown_ratio = (canopy_ht - canopy_baseht) / canopy_ht  # calculate crown ratio
+    f = crown_ratio * canopy_cover / 300
 
     # Calculate the mid-flame wind speed
     midflame_ws = ma.where(f <= 5,
