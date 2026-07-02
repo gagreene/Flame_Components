@@ -722,7 +722,7 @@ def flame_component_array_multiprocessing(flame_function: str,
 
     **flame_function options**
         "midflame_ws", "flame_length", "flame_height",
-        "flame_tilt", "flame_residence" (→ getFlameResidenceTime), "flame_depth"
+        "flame_tilt", "flame_residence" (→ get_flame_residence_time), "flame_depth"
 
     :param flame_function: The flame components function to implement.
     :param num_processors: Number of cores for multiprocessing

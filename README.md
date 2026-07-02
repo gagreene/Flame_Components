@@ -5,13 +5,13 @@ This repository provides several functions for calculating various fire behavior
 
 ## Features
 
-- **Mid-Flame Wind Speed Calculation** (`getMidFlameWS`): Calculates mid-flame wind speed based on parameters such as wind speed, canopy cover, and canopy height.
-- **Flame Length Estimation** (`getFlameLength`): Estimates flame length using different published models.
-- **Flame Height Calculation** (`getFlameHeight`): Calculates flame height based on flame length and model-specific parameters.
-- **Flame Tilt Angle Calculation** (`getFlameTilt`): Calculates the angle of flame tilt relative to vertical.
-- **Flame Residence Time** (`getFlameResidenceTime`): Computes flame residence time based on rate of spread, fuel consumption, and wind speed.
-- **Flame Depth Calculation** (`getFlameDepth`): Calculates flame depth using flame residence time and rate of spread.
-- **Array Multiprocessing** (`flameComponent_ArrayMultiprocessing`): Enables multiprocessing of flame component calculations across blocks of data, making large-scale processing efficient.
+- **Mid-Flame Wind Speed Calculation** (`get_mid_flame_ws`): Calculates mid-flame wind speed based on parameters such as wind speed, canopy cover, and canopy height.
+- **Flame Length Estimation** (`get_flame_length`): Estimates flame length using different published models.
+- **Flame Height Calculation** (`get_flame_height`): Calculates flame height based on flame length and model-specific parameters.
+- **Flame Tilt Angle Calculation** (`get_flame_tilt`): Calculates the angle of flame tilt relative to vertical.
+- **Flame Residence Time** (`get_flame_residence_time`): Computes flame residence time based on rate of spread, fuel consumption, and wind speed.
+- **Flame Depth Calculation** (`get_flame_depth`): Calculates flame depth using flame residence time and rate of spread.
+- **Array Multiprocessing** (`flame_component_array_multiprocessing`): Enables multiprocessing of flame component calculations across blocks of data, making large-scale processing efficient.
 
 ## Requirements
 
@@ -22,20 +22,20 @@ This repository provides several functions for calculating various fire behavior
 
 ### Key Functions
 
-- **`getMidFlameWS`**: Calculates mid-flame wind speed.
-- **`getFlameLength`**: Estimates flame length based on specified models.
-- **`getFlameHeight`**: Calculates flame height for a given flame length.
-- **`getFlameTilt`**: Computes flame tilt angle using various models.
-- **`getFlameResidenceTime`**: Estimates flame residence time for a given rate of spread.
-- **`getFlameDepth`**: Computes flame depth from flame residence time and rate of spread.
+- **`get_mid_flame_ws`**: Calculates mid-flame wind speed.
+- **`get_flame_length`**: Estimates flame length based on specified models.
+- **`get_flame_height`**: Calculates flame height for a given flame length.
+- **`get_flame_tilt`**: Computes flame tilt angle using various models.
+- **`get_flame_residence_time`**: Estimates flame residence time for a given rate of spread.
+- **`get_flame_depth`**: Computes flame depth from flame residence time and rate of spread.
 
 ### Example
 
 ```python
-from flame_components import getMidFlameWS, getFlameLength
+from flame_components import get_mid_flame_ws, get_flame_length
 
 # Example calculation for mid-flame wind speed
-mid_flame_ws = getMidFlameWS(
+mid_flame_ws = get_mid_flame_ws(
     wind_speed=15,
     canopy_cover=50,
     canopy_ht=10,
@@ -44,7 +44,7 @@ mid_flame_ws = getMidFlameWS(
 )
 
 # Example calculation for flame length
-flame_length = getFlameLength(
+flame_length = get_flame_length(
     model='Byram_HEAD',
     fire_intensity=500
 )
@@ -55,10 +55,10 @@ flame_length = getFlameLength(
 To perform calculations across blocks of data using multiple processors:
 
 ```python
-from flame_components import flameComponent_ArrayMultiprocessing
+from flame_components import flame_component_array_multiprocessing
 
 # Example multiprocessing calculation
-results = flameComponent_ArrayMultiprocessing(
+results = flame_component_array_multiprocessing(
     flame_function='midflame_ws',
     num_processors=4,
     wind_speed=array_of_wind_speed,
