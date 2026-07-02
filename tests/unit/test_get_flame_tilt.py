@@ -48,12 +48,22 @@ class TestGetFlameTiltFinneyModel:
         )
         assert result >= 0.0
 
-    def test_percent_slope_accepted(self):
-        result = get_flame_tilt(
+    def test_percent_slope_matches_equivalent_degree_slope(self):
+        """
+        A 20% slope is arctan(0.20) in degrees (~11.31°). Converting through
+        either 'percent' or the equivalent 'degrees' value must produce the same
+        tilt, confirming the percent-to-radians conversion is correct rather than
+        merely non-negative.
+        """
+        percent = get_flame_tilt(
             'Finney', flame_length=10.0, flame_height=8.0,
             slope_angle=20.0, slope_units='percent'
         )
-        assert result >= 0.0
+        degrees = get_flame_tilt(
+            'Finney', flame_length=10.0, flame_height=8.0,
+            slope_angle=np.degrees(np.arctan(0.20)), slope_units='degrees'
+        )
+        assert percent == pytest.approx(degrees, rel=1e-4)
 
 
 class TestGetFlameTiltButlerModel:
@@ -70,13 +80,17 @@ class TestGetFlameTiltButlerModel:
         tilt_high = get_flame_tilt('Butler', wind_speed=80.0, wind_speed_units='kph', canopy_ht=20.0)
         assert tilt_high > tilt_low
 
-    def test_mph_units_accepted(self):
-        result = get_flame_tilt('Butler', wind_speed=30.0, wind_speed_units='mph', canopy_ht=20.0)
-        assert result >= 0.0
+    def test_mph_units_matches_equivalent_kph(self):
+        """36 km/h == 22.3694 mph; both must convert to the same internal m/s wind speed."""
+        kph = get_flame_tilt('Butler', wind_speed=36.0, wind_speed_units='kph', canopy_ht=20.0)
+        mph = get_flame_tilt('Butler', wind_speed=22.3694, wind_speed_units='mph', canopy_ht=20.0)
+        assert mph == pytest.approx(kph, rel=1e-4)
 
-    def test_mps_units_accepted(self):
-        result = get_flame_tilt('Butler', wind_speed=10.0, wind_speed_units='mps', canopy_ht=20.0)
-        assert result >= 0.0
+    def test_mps_units_matches_equivalent_kph(self):
+        """36 km/h == 10 m/s; both must convert to the same internal m/s wind speed."""
+        kph = get_flame_tilt('Butler', wind_speed=36.0, wind_speed_units='kph', canopy_ht=20.0)
+        mps = get_flame_tilt('Butler', wind_speed=10.0, wind_speed_units='mps', canopy_ht=20.0)
+        assert mps == pytest.approx(kph, rel=1e-4)
 
     def test_zero_canopy_ht_raises(self):
         """

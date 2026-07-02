@@ -8,6 +8,7 @@ import pytest
 import numpy as np
 from flame_components import (
     get_flame_height,
+    get_flame_residence_time,
     flame_component_array_multiprocessing,
 )
 
@@ -63,25 +64,36 @@ class TestMultiprocessingBugs:
     """
 
     def test_kwargs_signature_accepts_keyword_arguments(self):
-        """Bug 3: keyword arguments must not raise TypeError."""
+        """
+        Bug 3: keyword arguments must not raise TypeError. Also asserts the
+        dispatcher's result is numerically correct, not just exception-free --
+        concatenating the returned blocks must match a direct call.
+        """
         ros = np.array([1.0, 1.5, 2.0, 2.5])
         fc_arr = np.array([0.5, 0.6, 0.7, 0.8])
         ws = np.array([1.0, 1.2, 1.4, 1.6])
         try:
-            flame_component_array_multiprocessing(
+            blocks = flame_component_array_multiprocessing(
                 'flame_residence', 2, None,
                 ros=ros, fuel_consumption=fc_arr, midflame_ws=ws, units='sec'
             )
         except TypeError as e:
             pytest.fail(f"Bug 3 still present — *kwargs rejected keyword args: {e}")
+        result = np.concatenate(blocks)
+        expected = get_flame_residence_time(ros, fc_arr, ws, units='sec')
+        np.testing.assert_allclose(result, expected)
 
     def test_flame_residence_key_resolves_to_valid_function(self):
-        """Bug 4: 'flame_residence' key must resolve to get_flame_residence_time."""
+        """
+        Bug 4: 'flame_residence' key must resolve to get_flame_residence_time.
+        Also asserts the resolved function actually computes the correct result,
+        not just that it resolves to something callable.
+        """
         ros = np.array([1.0, 1.5, 2.0, 2.5])
         fc_arr = np.array([0.5, 0.6, 0.7, 0.8])
         ws = np.array([1.0, 1.2, 1.4, 1.6])
         try:
-            flame_component_array_multiprocessing(
+            blocks = flame_component_array_multiprocessing(
                 'flame_residence', 2, None,
                 ros=ros, fuel_consumption=fc_arr, midflame_ws=ws, units='sec'
             )
@@ -89,3 +101,7 @@ class TestMultiprocessingBugs:
             assert 'does not exist' not in str(e), (
                 f"Bug 4 still present — 'flame_residence' resolved to None: {e}"
             )
+            raise
+        result = np.concatenate(blocks)
+        expected = get_flame_residence_time(ros, fc_arr, ws, units='sec')
+        np.testing.assert_allclose(result, expected)

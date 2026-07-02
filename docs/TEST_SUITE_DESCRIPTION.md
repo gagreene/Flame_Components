@@ -1,7 +1,7 @@
 # Test Suite Description
 
-**112 tests** across three groups: `tests/unit/` (101), `tests/integration/` (6),
-`tests/regression/` (5). Run with `pytest tests/ -v`.
+**122 tests** across three groups: `tests/unit/` (110), `tests/integration/` (7),
+`tests/regression/` (5). Run with `pytest tests/ -v` (or `uv run pytest tests/ -v`).
 
 ## Overview
 
@@ -54,10 +54,29 @@ convention above:
 
 ## Unit tests (`tests/unit/`)
 
-One file per public function, plus one for the multiprocessing dispatcher. Each file
-has up to three classes: `*Scalar`/model-named classes (happy-path + edge-case
-behavior for scalar input), `*Array` (vectorized behavior, shape, NaN propagation), and
-`*Errors` (invalid input raises the right exception type).
+One file per public function, one for the multiprocessing dispatcher, and one for the
+deprecated camelCase aliases. Per-function files have up to three classes:
+`*Scalar`/model-named classes (happy-path + edge-case behavior for scalar input),
+`*Array` (vectorized behavior, shape, NaN propagation), and `*Errors` (invalid input
+raises the right exception type).
+
+### `test_deprecated_aliases.py` (9 tests)
+
+Tests the camelCase backward-compatibility aliases (`getMidFlameWS`, `getFlameLength`,
+`getFlameHeight`, `getFlameTilt`, `getFlameResidenceTime`, `getFlameDepth`,
+`flameComponent_ArrayMultiprocessing`), which remain importable but are deprecated.
+
+| Test | What & why |
+|---|---|
+| `test_get_mid_flame_ws_alias` | The alias emits `DeprecationWarning` and returns exactly the same result as `get_mid_flame_ws` for the same input — the alias must be a true pass-through wrapper, not a separately-maintained implementation that could drift. |
+| `test_get_flame_length_alias` | Same pass-through check for `getFlameLength`/`get_flame_length`. |
+| `test_get_flame_height_alias` | Same pass-through check for `getFlameHeight`/`get_flame_height`. |
+| `test_get_flame_tilt_alias` | Same pass-through check for `getFlameTilt`/`get_flame_tilt`. |
+| `test_get_flame_residence_time_alias` | Same pass-through check for `getFlameResidenceTime`/`get_flame_residence_time`. |
+| `test_get_flame_depth_alias` | Same pass-through check for `getFlameDepth`/`get_flame_depth`. |
+| `test_flame_component_array_multiprocessing_alias` | Same pass-through check for `flameComponent_ArrayMultiprocessing`/`flame_component_array_multiprocessing`, comparing the concatenated block lists from both. |
+| `test_all_contains_only_snake_case_names` | `flame_components.__all__` contains exactly the 7 snake_case public function names — `from flame_components import *` must not surface implementation details like private helpers. |
+| `test_aliases_not_in_all` | None of the 7 camelCase aliases appear in `__all__`, even though they remain directly importable by name — deprecated names are opt-in only. |
 
 ### `test_get_mid_flame_ws.py` (14 tests)
 
@@ -93,7 +112,7 @@ Tests the 28 published fire-intensity-to-flame-length correlations (Finney & Gru
 | `test_non_negative` | Basic non-negativity floor. |
 | `test_params_only_returns_tuple` | `params_only=True` returns the raw `(a, b)` model-parameter tuple instead of computing a length — an alternate code path worth covering directly since it returns early, before any masked-array math runs. |
 | `test_finney_head_without_flame_depth_raises` | `Finney_HEAD` is the one model requiring `flame_depth`; omitting it must raise `ValueError`, not silently divide by `None`. |
-| `test_finney_head_with_flame_depth_returns_positive` | `Finney_HEAD` with both required args succeeds. |
+| `test_finney_head_known_value` | `Finney_HEAD` (`fl = 0.01051 * I^0.774 / D^0.161`) against a hand-computed value — anchors the coefficient/exponent tuple for this special three-parameter model, the only one requiring `flame_depth`. |
 | `test_finney_head_zero_flame_depth_is_undefined_returns_nan` | **Documented NaN case:** dividing by `flame_depth**0.161` at `flame_depth=0` is undefined; asserts `NaN`, not a crash or a silently wrong number. |
 | `test_negative_fire_intensity_is_undefined_returns_nan` | **Documented NaN case:** a fractional power of a negative number is undefined in the reals. |
 | `test_params_only_non_bool_raises_type_error` | `params_only='yes'` (a truthy non-bool) must raise `TypeError`, not be silently treated as `True`. |
@@ -147,11 +166,11 @@ Tests three independent models: Standard geometry (flat ground), Finney & Martin
 | `test_non_negative` | Basic non-negativity floor. |
 | `test_height_exceeds_length_is_undefined_returns_nan` | **Documented NaN case:** `height > length` pushes `arccos`'s argument outside `[-1, 1]`; a flame can't be taller than its own length, so this is genuinely undefined, not just unusual. |
 | `test_flat_ground_returns_non_negative` | Finney model on flat ground (`slope_angle=0`) is a distinct formula branch (`slope_angle <= 1`) from the sloped case; verifies it at least produces a sane result. |
-| `test_percent_slope_accepted` | `slope_units='percent'` accepted without error. |
+| `test_percent_slope_matches_equivalent_degree_slope` | A 20% slope (`slope_units='percent'`) and its equivalent `arctan(0.20)` degree value (`slope_units='degrees'`) must produce the same tilt — confirms the percent-to-radians conversion is numerically correct, not just branch-reachable. |
 | `test_butler_returns_positive_tilt` | Butler model (crown fire + wind) produces a positive tilt — basic happy path for the third, independent model. |
 | `test_higher_wind_produces_more_tilt` | Stronger wind → greater tilt (monotonicity) — a directional sanity check the exact-value tests below can't provide on their own. |
-| `test_mph_units_accepted` | `wind_speed_units='mph'` conversion branch exercised. |
-| `test_mps_units_accepted` | `wind_speed_units='mps'` (no conversion needed) exercised — the "do nothing" branch is still a branch and can silently break. |
+| `test_mph_units_matches_equivalent_kph` | `36 km/h` and its exact `22.3694 mph` equivalent must produce the same tilt — confirms the `mph`→m/s conversion factor is correct, not just that the branch runs. |
+| `test_mps_units_matches_equivalent_kph` | `36 km/h` and its exact `10 m/s` equivalent must produce the same tilt — confirms the "no conversion needed" `mps` branch is truly a no-op, not just reachable. |
 | `test_zero_canopy_ht_raises` | `canopy_ht=0` (Butler model divides by it) raises a clean `ValueError` rather than leaking a raw `ZeroDivisionError`. |
 | `test_negative_canopy_ht_raises` | Negative `canopy_ht` is equally non-physical and must raise the same `ValueError`. |
 | `test_string_canopy_ht_raises_type_error` | Wrong type for `canopy_ht` raises `TypeError` before reaching any arithmetic. |
@@ -216,7 +235,7 @@ Tests the block-splitting multiprocessing dispatcher.
 
 ---
 
-## Integration tests (`tests/integration/test_flame_pipeline.py`) (6 tests)
+## Integration tests (`tests/integration/test_flame_pipeline.py`) (7 tests)
 
 Unlike the unit tests (one function, isolated), these chain multiple functions the way
 a real fire-behavior workflow would, verifying that one function's output is valid
@@ -226,6 +245,7 @@ two functions that are each individually correct).
 | Test | What & why |
 |---|---|
 | `test_scalar_pipeline_produces_positive_depth` | `get_flame_residence_time` → `get_flame_depth`: residence time output feeds into flame depth without type errors and produces a physically sane (positive) result. |
+| `test_residence_depth_pipeline_known_value` | Same pipeline against a hand-computed exact value (`ros=fuel_consumption=midflame_ws=1.0` → `res_time=flame_depth=0.39`) — pins a fixed numeric result through both functions, catching unit-conversion drift that a positivity-only check can't. |
 | `test_array_pipeline_preserves_shape` | Same pipeline, vectorized: shape is preserved end-to-end and all values stay non-negative through both functions' clamping. |
 | `test_scalar_height_bounded_by_flame_length` | `get_mid_flame_ws` → `get_flame_length` → `get_flame_height`: chains three functions and asserts the Nelson model's height-capped-at-length invariant still holds when the inputs come from upstream calculations rather than hand-picked values. |
 | `test_array_pipeline_shape_and_bounds` | Same three-function pipeline, vectorized. |
@@ -245,5 +265,5 @@ these test *specific past incidents*.
 | `test_string_fire_type_surface_does_not_raise` | Historical Bug: `fire_type`'s `isinstance` guard didn't include `str`, so `fire_type='surface'` raised `TypeError` even though string fire types are documented as valid. |
 | `test_string_fire_type_active_crown_does_not_raise` | Same bug, second valid string value — confirms the fix isn't value-specific. |
 | `test_string_fire_type_with_array_midflame_ws` | A second historical bug compounded the first: the `isinstance` check for the *numeric* fire_type branch mistakenly checked `midflame_ws` instead of `fire_type`, so this combination (string `fire_type` + array `midflame_ws`) raised `AttributeError`. Both fixes are required simultaneously for this case to pass. |
-| `test_kwargs_signature_accepts_keyword_arguments` | Historical bug: `flame_component_array_multiprocessing` accepted `*kwargs` (a positional tuple) instead of `**kwargs` (a keyword dict), so calling it with keyword arguments (the only way its API is documented to be used) raised `TypeError`. |
-| `test_flame_residence_key_resolves_to_valid_function` | Historical bug: the dispatcher's function-name lookup string was `'getFlameResidence'` (missing `'Time'`), so `globals().get(...)` returned `None` and the dispatcher raised "function does not exist" for a documented, valid key. |
+| `test_kwargs_signature_accepts_keyword_arguments` | Historical bug: `flame_component_array_multiprocessing` accepted `*kwargs` (a positional tuple) instead of `**kwargs` (a keyword dict), so calling it with keyword arguments (the only way its API is documented to be used) raised `TypeError`. Also asserts the concatenated block results are numerically identical to a direct `get_flame_residence_time` call — not just that no exception occurs. |
+| `test_flame_residence_key_resolves_to_valid_function` | Historical bug: the dispatcher's function-name lookup string was `'getFlameResidence'` (missing `'Time'`), so `globals().get(...)` returned `None` and the dispatcher raised "function does not exist" for a documented, valid key. Also asserts the concatenated block results are numerically identical to a direct `get_flame_residence_time` call — the resolved function must be correct, not merely resolvable. |

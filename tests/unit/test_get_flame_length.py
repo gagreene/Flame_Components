@@ -38,10 +38,15 @@ class TestGetFlameLengthScalar:
         with pytest.raises(ValueError):
             get_flame_length('Finney_HEAD', 1000.0)
 
-    def test_finney_head_with_flame_depth_returns_positive(self):
-        """Finney_HEAD with both required args returns positive float."""
+    def test_finney_head_known_value(self):
+        """
+        Finney_HEAD: fl = 0.01051 * I^0.774 / D^0.161
+        I=1000, D=5: 0.01051 * 1000^0.774 / 5^0.161 = 1.7024 m
+        Anchors the coefficient/exponent tuple for the special three-parameter model.
+        """
+        expected = 0.01051 * (1000.0 ** 0.774) / (5.0 ** 0.161)
         result = get_flame_length('Finney_HEAD', 1000.0, flame_depth=5.0)
-        assert result > 0.0
+        assert result == pytest.approx(expected, rel=1e-6)
 
     def test_finney_head_zero_flame_depth_is_undefined_returns_nan(self):
         """

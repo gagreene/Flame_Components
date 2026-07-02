@@ -30,6 +30,24 @@ class TestResidenceTimeToFlameDepth:
         flame_depth = get_flame_depth(ros, res_time)
         assert flame_depth > 0.0
 
+    def test_residence_depth_pipeline_known_value(self):
+        """
+        ros=1.0, fuel_consumption=1.0, midflame_ws=1.0, units='min':
+        res_time = 0.39 * 1^0.25 * 1^1.51 / (1/60) / 60 = 0.39 min
+        flame_depth = ros * res_time = 1.0 * 0.39 = 0.39 m
+        Pins an exact numeric value through both functions, catching
+        unit-conversion drift between the two that a positivity check can't.
+        """
+        ros = 1.0
+        fuel_consumption = 1.0
+        midflame_ws = 1.0
+
+        res_time = get_flame_residence_time(ros, fuel_consumption, midflame_ws, units='min')
+        flame_depth = get_flame_depth(ros, res_time)
+
+        assert res_time == pytest.approx(0.39, rel=1e-6)
+        assert flame_depth == pytest.approx(0.39, rel=1e-6)
+
     def test_array_pipeline_preserves_shape(self):
         """Vectorized pipeline preserves shape and all values are non-negative."""
         ros = np.array([1.0, 2.0, 3.0])
