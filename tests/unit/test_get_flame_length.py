@@ -43,6 +43,28 @@ class TestGetFlameLengthScalar:
         result = get_flame_length('Finney_HEAD', 1000.0, flame_depth=5.0)
         assert result > 0.0
 
+    def test_finney_head_zero_flame_depth_is_undefined_returns_nan(self):
+        """
+        Finney_HEAD divides by flame_depth^0.161; flame_depth=0 is a division by
+        zero. Documents the NaN-for-undefined convention (zero depth is numerically
+        degenerate, not a type/domain error) rather than raising.
+        """
+        result = get_flame_length('Finney_HEAD', 1000.0, flame_depth=0.0)
+        assert np.isnan(result)
+
+    def test_negative_fire_intensity_is_undefined_returns_nan(self):
+        """
+        Fire intensity is physically non-negative. A negative value raises a
+        fractional power of a negative number (undefined in the reals); documents
+        that this returns NaN rather than a silently-wrong or complex value.
+        """
+        result = get_flame_length('Byram_HEAD', -100.0)
+        assert np.isnan(result)
+
+    def test_params_only_non_bool_raises_type_error(self):
+        with pytest.raises(TypeError):
+            get_flame_length('Byram_HEAD', 100.0, params_only='yes')
+
 
 class TestGetFlameLengthArray:
     def test_array_output_shape(self):

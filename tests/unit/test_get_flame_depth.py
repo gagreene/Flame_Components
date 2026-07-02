@@ -23,10 +23,15 @@ class TestGetFlameDepthScalar:
         result = get_flame_depth(2.0, 3.0)
         assert isinstance(result, (float, np.floating))
 
-    def test_negative_clamped_to_zero(self):
-        """Negative ros produces non-negative depth (floor at 0)."""
+    def test_negative_ros_clamped_to_zero(self):
+        """Negative ros makes the product negative (-1.0*2.0=-2.0); floored at exactly 0."""
         result = get_flame_depth(-1.0, 2.0)
-        assert result >= 0.0
+        assert result == pytest.approx(0.0)
+
+    def test_negative_res_time_clamped_to_zero(self):
+        """Negative res_time makes the product negative (5.0*-2.0=-10.0); floored at exactly 0."""
+        result = get_flame_depth(5.0, -2.0)
+        assert result == pytest.approx(0.0)
 
 
 class TestGetFlameDepthArray:

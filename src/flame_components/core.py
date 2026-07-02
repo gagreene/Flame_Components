@@ -331,6 +331,11 @@ def get_flame_height(model: str,
         elif isinstance(fire_type, numbers.Real):  # Bug 2 fix: was isinstance(midflame_ws, ...)
             fire_type = ma.array([float(fire_type)], mask=isnan([fire_type]))
 
+        # Verify fire_type values are within the valid domain (1, 2, or 3)
+        if ma.any(~ma.getmaskarray(fire_type) & ~ma.isin(fire_type, [1, 2, 3])):
+            raise ValueError('The "fire_type" parameter must be 1 ("surface"), '
+                             '2 ("passive crown"), or 3 ("active crown")')
+
     # Verify fire_intensity
     if not isinstance(fire_intensity, (numbers.Real, ndarray, type(None))):
         raise TypeError('fire_intensity must be either iNone, nt, float or numpy ndarray data types')
@@ -516,6 +521,18 @@ def get_flame_tilt(model: str,
     elif wind_speed_units not in ['kph', 'mps', 'mph', None]:
         raise ValueError(f'The "wind_speed_units" parameter must be one of the following: "kph", "mps", "mph')
 
+    # Verify canopy_ht
+    if not isinstance(canopy_ht, (numbers.Real, ndarray, type(None))):
+        raise TypeError('canopy_ht must be either None, int, float or numpy ndarray data types')
+    elif isinstance(canopy_ht, ndarray):
+        canopy_ht = ma.array(canopy_ht, mask=isnan(canopy_ht))
+    elif isinstance(canopy_ht, numbers.Real):
+        canopy_ht = ma.array([float(canopy_ht)], mask=isnan([canopy_ht]))
+
+    # Verify canopy_ht is positive (Butler model divides by it; canopy_ht <= 0 is not physical)
+    if model == 'Butler' and ma.any(~ma.getmaskarray(canopy_ht) & (canopy_ht <= 0)):
+        raise ValueError('The "canopy_ht" parameter must be greater than 0 for the "Butler" model')
+
     # Calculate flame tilt angle (radians)
     if model == 'Standard':
         tilt_v = arccos(flame_height / flame_length)
@@ -613,6 +630,12 @@ def get_flame_residence_time(ros: Union[int, float, ndarray],
         midflame_ws = ma.array(midflame_ws, mask=isnan(midflame_ws))
     else:  # isinstance(midflame_ws, numbers.Real):
         midflame_ws = ma.array([midflame_ws], mask=isnan([midflame_ws]))
+
+    # Verify units
+    if not isinstance(units, str):
+        raise TypeError('The "units" parameter must be a str data type')
+    elif units not in ['sec', 'min']:
+        raise ValueError('The "units" parameter must be either "sec" or "min"')
 
     # Calculate flame residence time
     res_time = (0.39 * power(fuel_consumption, 0.25) * power(midflame_ws, 1.51)) / (ros / 60)
@@ -731,7 +754,9 @@ def flame_component_array_multiprocessing(flame_function: str,
     :param kwargs: A dictionary of inputs for the requested flame_components function.
         The dictionary keys must match the required input parameters for the requested function.
         Refer to the function docstring for parameter requirements.
-    :return: Concatenated output array from all workers
+    :return: List of per-block output arrays, one per worker, in block order.
+        NOTE: NOT concatenated into a single array — callers must call
+        ``numpy.concatenate()`` on the result themselves if a single array is needed.
     """
     flame_func_dict = {
         'midflame_ws': 'get_mid_flame_ws',
@@ -767,8 +792,10 @@ def flame_component_array_multiprocessing(flame_function: str,
     # Verify num_processors is greater than 1
     if num_processors < 2:
         num_processors = 2
-        raise UserWarning('Multiprocessing requires at least two cores.\n'
-                          'Defaulting num_processors to 2 for this run')
+        warnings.warn('Multiprocessing requires at least two cores.\n'
+                      'Defaulting num_processors to 2 for this run',
+                      UserWarning,
+                      stacklevel=2)
 
     # Verify block size
     if block_size is None:

@@ -23,6 +23,9 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/flame_components"]
 

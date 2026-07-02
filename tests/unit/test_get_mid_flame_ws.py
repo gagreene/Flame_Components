@@ -56,16 +56,29 @@ class TestGetMidFlameWSScalar:
             )
         assert result >= 0.0
 
-    def test_si_and_imp_results_are_both_in_mps(self):
+    def test_si_and_imp_agree_for_equivalent_inputs(self):
         """
-        Both units modes output m/s. A 10 m/s reference wind on open ground
-        should produce mid-flame ws of the same order of magnitude.
+        SI and IMP describe the same physical scenario in different units — but
+        NOT the same wind measurement: SI expects 10-m wind speed (km/h), IMP
+        expects 20-ft wind speed (mi/h), and the two differ by the documented 1.15
+        factor (Lawson and Armitage 2008). Converting 36 km/h (10-m) to its 20-ft
+        mph equivalent (36 / 1.15 / 1.60934 mph) — plus straightforward m->ft
+        height conversions — must produce the same mid-flame wind speed (m/s)
+        regardless of which unit system described the scenario. Previously this
+        test only checked `>= 0` on each result independently, which would pass
+        even if the two unit conversions silently disagreed.
         """
-        si_result = get_mid_flame_ws(36.0, 50, 20.0, 5.0, 'SI')    # 36 km/h ≈ 10 m/s ref
-        assert 0.0 <= si_result
+        si_result = get_mid_flame_ws(36.0, 50, 20.0, 5.0, 'SI')
+        imp_result = get_mid_flame_ws(36.0 / 1.15 / 1.60934, 50, 20.0 * 3.28084, 5.0 * 3.28084, 'IMP')
+        assert imp_result == pytest.approx(si_result, rel=1e-3)
 
-        imp_result = get_mid_flame_ws(22.37, 50, 65.6, 16.4, 'IMP')  # ~10 m/s ref in mph
-        assert 0.0 <= imp_result
+    def test_negative_wind_speed_clamped_to_zero(self):
+        """Negative wind speed is non-physical; result is floored at exactly 0."""
+        result = get_mid_flame_ws(
+            wind_speed=-20.0, canopy_cover=50,
+            canopy_ht=20.0, canopy_baseht=5.0, units='SI'
+        )
+        assert result == pytest.approx(0.0)
 
 
 class TestGetMidFlameWSArray:

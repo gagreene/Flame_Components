@@ -176,3 +176,18 @@ class TestGetFlameHeightErrors:
     def test_non_string_model_raises(self):
         with pytest.raises(TypeError):
             get_flame_height(42, 5.0)
+
+    def test_invalid_integer_fire_type_raises(self):
+        """
+        Regression test: integer fire_type was never checked against the valid
+        domain {1, 2, 3} — only string fire_type went through the fire_type_dict
+        lookup. A stray value like 99 previously fell through to the crown-fire
+        branch silently (since it isn't in [1, 2], `a` became 0.0175) and returned
+        a plausible-looking but physically meaningless number instead of erroring.
+        """
+        with pytest.raises(ValueError):
+            get_flame_height('Nelson', 5.0, fire_type=99, fire_intensity=1000.0, midflame_ws=2.0)
+
+    def test_zero_fire_type_raises(self):
+        with pytest.raises(ValueError):
+            get_flame_height('Nelson', 5.0, fire_type=0, fire_intensity=1000.0, midflame_ws=2.0)

@@ -25,9 +25,19 @@ class TestGetFlameResidenceTimeScalar:
         result = get_flame_residence_time(1.0, 1.0, 1.0, 'sec')
         assert isinstance(result, (float, np.floating))
 
-    def test_non_negative(self):
-        result = get_flame_residence_time(1.0, 1.0, 1.0, 'sec')
-        assert result >= 0.0
+    def test_negative_ros_clamped_to_zero(self):
+        """Negative ros flips the formula's sign; result is floored at exactly 0."""
+        result = get_flame_residence_time(ros=-1.0, fuel_consumption=1.0, midflame_ws=1.0, units='sec')
+        assert result == pytest.approx(0.0)
+
+    def test_zero_ros_is_undefined_returns_nan(self):
+        """
+        ros=0 means no fire spread; residence time is undefined (division by zero
+        in the ros/60 denominator). Documents the library's NaN-for-undefined convention
+        rather than raising — ros=0 is numerically degenerate, not a type/domain error.
+        """
+        result = get_flame_residence_time(ros=0.0, fuel_consumption=1.0, midflame_ws=1.0, units='sec')
+        assert np.isnan(result)
 
 
 class TestGetFlameResidenceTimeArray:
@@ -64,3 +74,16 @@ class TestGetFlameResidenceTimeErrors:
     def test_string_ros_raises(self):
         with pytest.raises(TypeError):
             get_flame_residence_time('fast', 1.0, 1.0, 'sec')
+
+    def test_invalid_units_raises(self):
+        """
+        Regression test: 'units' previously had NO validation at all — any string
+        other than 'min' silently fell through to the 'sec' behavior, so a typo like
+        'seconds' would silently return a value in the wrong unit with no error.
+        """
+        with pytest.raises(ValueError):
+            get_flame_residence_time(1.0, 1.0, 1.0, units='seconds')
+
+    def test_non_string_units_raises(self):
+        with pytest.raises(TypeError):
+            get_flame_residence_time(1.0, 1.0, 1.0, units=42)
