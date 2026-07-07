@@ -15,8 +15,8 @@ This repository provides several functions for calculating various fire behavior
 
 ## Requirements
 
-- Python 3.8+
-- **Libraries**: `numpy`, `multiprocessing`
+- Python 3.9+
+- **Libraries**: `numpy`
 
 ## Installation
 
