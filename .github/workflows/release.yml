@@ -1,0 +1,103 @@
+name: Publish
+
+# Runs only for a deliberate, human-published GitHub Release -- never on a bare tag push.
+# Mark the Release as "pre-release" (e.g. a v0.1.1rc1 tag) to publish to TestPyPI, or as a
+# full release (e.g. v0.1.1) to publish to PyPI. See docs/RELEASING.md.
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build, validate, and smoke-test distributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # needed to attach dist/ files to the GitHub Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # full history + tags, required for hatch-vcs to derive the version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install project (extras + dev group)
+        run: uv sync --all-extras --dev
+
+      - name: Run full test suite
+        run: uv run pytest tests/ -v --tb=long
+
+      - name: Build distributions
+        run: uv build --no-sources
+
+      - name: Validate distributions
+        run: uvx twine check dist/*
+
+      - name: Install the built wheel into a fresh environment and smoke-test it
+        run: |
+          uv venv /tmp/smoke-wheel
+          uv pip install --python /tmp/smoke-wheel/bin/python dist/*.whl
+          /tmp/smoke-wheel/bin/python scripts/smoke_test.py
+
+      - name: Upload distributions as a workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+      - name: Attach distributions to the GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: github.event.release.prerelease == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/flame-components/
+    permissions:
+      id-token: write  # required for Trusted Publishing; granted only to this job
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/flame-components/
+    permissions:
+      id-token: write  # required for Trusted Publishing; granted only to this job
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
