@@ -196,4 +196,5 @@ Contributions are welcome. If you have ideas for new features or improvements, p
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the
+[LICENSE](https://github.com/gagreene/flame_components/blob/master/LICENSE) file for details.
