@@ -1,7 +1,7 @@
 
 # Flame Components
 
-This repository provides several functions for calculating various fire behavior metrics such as mid-flame wind speed, flame length, flame height, flame tilt, flame residence time, and flame depth. It also includes utility functions for multiprocessing these calculations across blocks of data, which can be useful for high-performance fire modeling.
+This repository provides several functions for calculating various flame characteristics such as mid-flame wind speed, flame length, flame height, flame tilt, flame residence time, and flame depth. It also includes utility functions for multiprocessing these calculations across blocks of data, which can be useful for high-performance fire modeling.
 
 ## Features
 

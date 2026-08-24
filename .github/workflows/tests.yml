@@ -26,6 +26,12 @@ jobs:
           # enough here, the Linux matrix above already covers the full Python range.
           - os: windows-latest
             python-version: "3.12"
+          # macOS leg: no OS-specific code, but previously untested and the
+          # "Operating System :: OS Independent" classifier was an unverified claim.
+          # macOS defaults to the "spawn" multiprocessing start method (like Windows,
+          # unlike Linux's "fork"), so this also exercises that path on another platform.
+          - os: macos-latest
+            python-version: "3.12"
       # These jobs also serve as the "latest NumPy" check: uv resolves the newest
       # compatible NumPy per Python version by default (no pin below), so an upcoming
       # NumPy release that breaks compatibility shows up here without a separate job.

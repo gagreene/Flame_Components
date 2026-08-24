@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "flame-components"
 dynamic = ["version"]
-description = "Fire behavior calculations for surface and crown fires"
+description = "Compute flame characteristics (length, height, tilt, residence time, depth, and mid-flame wind speed) for surface and crown fires"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
