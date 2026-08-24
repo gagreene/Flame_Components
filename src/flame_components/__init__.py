@@ -21,14 +21,6 @@ from flame_components.core import (
     get_flame_residence_time,
     get_flame_depth,
     flame_component_array_multiprocessing,
-    # Deprecated camelCase aliases — kept importable for backward compatibility
-    getMidFlameWS,
-    getFlameLength,
-    getFlameHeight,
-    getFlameTilt,
-    getFlameResidenceTime,
-    getFlameDepth,
-    flameComponent_ArrayMultiprocessing,
 )
 
 __all__ = [

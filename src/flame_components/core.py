@@ -844,33 +844,3 @@ def flame_component_array_multiprocessing(flame_function: str,
         results = async_result.get()
 
     return results
-
-
-# ---------------------------------------------------------------------------
-# Backward-compatibility aliases — camelCase names deprecated since 0.1.0
-# ---------------------------------------------------------------------------
-import functools as _functools
-
-
-def _deprecated_alias(new_func, old_name):
-    @_functools.wraps(new_func)
-    def wrapper(*args, **kwargs):
-        warnings.warn(
-            f"{old_name} is deprecated and will be removed in a future version. "
-            f"Use {new_func.__name__} instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return new_func(*args, **kwargs)
-    return wrapper
-
-
-getMidFlameWS = _deprecated_alias(get_mid_flame_ws, 'getMidFlameWS')
-getFlameLength = _deprecated_alias(get_flame_length, 'getFlameLength')
-getFlameHeight = _deprecated_alias(get_flame_height, 'getFlameHeight')
-getFlameTilt = _deprecated_alias(get_flame_tilt, 'getFlameTilt')
-getFlameResidenceTime = _deprecated_alias(get_flame_residence_time, 'getFlameResidenceTime')
-getFlameDepth = _deprecated_alias(get_flame_depth, 'getFlameDepth')
-flameComponent_ArrayMultiprocessing = _deprecated_alias(
-    flame_component_array_multiprocessing, 'flameComponent_ArrayMultiprocessing'
-)
