@@ -37,6 +37,21 @@ jobs:
       - name: Build distributions
         run: uv build --no-sources
 
+      - name: Verify the built version matches the release tag
+        # hatch-vcs derives the version from git tags -- assert it actually did, rather
+        # than trusting it silently. Guards against any stale-build/cache scenario
+        # producing a dev-version wheel that would otherwise get published as if it were
+        # the tagged release.
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          actual="$(uv run python -c 'import flame_components as fc; print(fc.__version__)')"
+          echo "expected (from tag): $expected"
+          echo "actual (from built package): $actual"
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::Built version '$actual' does not match release tag '$GITHUB_REF_NAME' (expected '$expected')"
+            exit 1
+          fi
+
       - name: Validate distributions
         run: uvx twine check dist/*
 
