@@ -1,6 +1,6 @@
 # Test Suite Description
 
-**122 tests** across three groups: `tests/unit/` (110), `tests/integration/` (7),
+**114 tests** across three groups: `tests/unit/` (102), `tests/integration/` (7),
 `tests/regression/` (5). Run with `pytest tests/ -v` (or `uv run pytest tests/ -v`).
 
 ## Overview
@@ -55,28 +55,16 @@ convention above:
 ## Unit tests (`tests/unit/`)
 
 One file per public function, one for the multiprocessing dispatcher, and one for the
-deprecated camelCase aliases. Per-function files have up to three classes:
+public `__all__` surface. Per-function files have up to three classes:
 `*Scalar`/model-named classes (happy-path + edge-case behavior for scalar input),
 `*Array` (vectorized behavior, shape, NaN propagation), and `*Errors` (invalid input
 raises the right exception type).
 
-### `test_deprecated_aliases.py` (9 tests)
-
-Tests the camelCase backward-compatibility aliases (`getMidFlameWS`, `getFlameLength`,
-`getFlameHeight`, `getFlameTilt`, `getFlameResidenceTime`, `getFlameDepth`,
-`flameComponent_ArrayMultiprocessing`), which remain importable but are deprecated.
+### `test_public_api.py` (1 test)
 
 | Test | What & why |
 |---|---|
-| `test_get_mid_flame_ws_alias` | The alias emits `DeprecationWarning` and returns exactly the same result as `get_mid_flame_ws` for the same input — the alias must be a true pass-through wrapper, not a separately-maintained implementation that could drift. |
-| `test_get_flame_length_alias` | Same pass-through check for `getFlameLength`/`get_flame_length`. |
-| `test_get_flame_height_alias` | Same pass-through check for `getFlameHeight`/`get_flame_height`. |
-| `test_get_flame_tilt_alias` | Same pass-through check for `getFlameTilt`/`get_flame_tilt`. |
-| `test_get_flame_residence_time_alias` | Same pass-through check for `getFlameResidenceTime`/`get_flame_residence_time`. |
-| `test_get_flame_depth_alias` | Same pass-through check for `getFlameDepth`/`get_flame_depth`. |
-| `test_flame_component_array_multiprocessing_alias` | Same pass-through check for `flameComponent_ArrayMultiprocessing`/`flame_component_array_multiprocessing`, comparing the concatenated block lists from both. |
 | `test_all_contains_only_snake_case_names` | `flame_components.__all__` contains exactly the 7 snake_case public function names — `from flame_components import *` must not surface implementation details like private helpers. |
-| `test_aliases_not_in_all` | None of the 7 camelCase aliases appear in `__all__`, even though they remain directly importable by name — deprecated names are opt-in only. |
 
 ### `test_get_mid_flame_ws.py` (14 tests)
 

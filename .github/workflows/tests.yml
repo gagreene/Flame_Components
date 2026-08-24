@@ -12,29 +12,84 @@ concurrency:
 
 jobs:
   test:
-    name: pytest (ubuntu, py3.12)
-    runs-on: ubuntu-latest
+    name: pytest (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        include:
+          # Windows leg: package exposes multiprocessing behavior and its main downstream
+          # project (FuelAnalyst) is developed on Windows -- one representative version is
+          # enough here, the Linux matrix above already covers the full Python range.
+          - os: windows-latest
+            python-version: "3.12"
+      # These jobs also serve as the "latest NumPy" check: uv resolves the newest
+      # compatible NumPy per Python version by default (no pin below), so an upcoming
+      # NumPy release that breaks compatibility shows up here without a separate job.
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # full history + tags, required for hatch-vcs to derive the version
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
           cache-dependency-glob: |
             uv.lock
             pyproject.toml
 
-      - name: Install Python 3.12
-        run: uv python install 3.12
+      - name: Install Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Install project (extras + dev group)
-        run: uv sync --all-extras --dev
+        run: uv sync --python ${{ matrix.python-version }} --all-extras --dev
 
-      - name: Run pytest
-        run: uv run pytest tests/ -v --tb=long
+      - name: Run pytest (warnings as errors)
+        run: uv run pytest tests/ -v --tb=long -W error
+
+      - name: Run package smoke test
+        run: uv run python scripts/smoke_test.py
+
+  minimum-dependency:
+    name: pytest (Python 3.11, NumPy 1.23.2 minimum)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install Python 3.11
+        run: uv python install 3.11
+
+      - name: Create test environment
+        run: uv venv --python 3.11
+
+      - name: Install minimum NumPy and test dependencies
+        run: uv pip install -e ".[test]" "numpy==1.23.2"
+
+      - name: Verify dependency version
+        run: |
+          uv run --no-sync python -c "
+          import numpy
+          assert numpy.__version__ == '1.23.2', numpy.__version__
+          "
+
+      - name: Run full test suite
+        run: uv run --no-sync pytest tests/ -v --tb=long
+
+      - name: Run package smoke test
+        run: uv run --no-sync python scripts/smoke_test.py
